@@ -4,6 +4,10 @@
 <h2>{{randomWord}}</h2>
 <h2>{{letterSpaces}}</h2>
 <hr>
+{{#each errors}}
+<h3>{{msg}}</h3>
+{{/each}}
+
 <h2>{{attempt}}</h2>
 
 
@@ -19,3 +23,5 @@
 <hr>
 <h2>Guesses Remaining</h2>
 <h3>{{guessesLeft}}</h3>
+
+<a href="/newGame">Play Again?</a>             <!-- style to make look like button -->

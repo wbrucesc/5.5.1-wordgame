@@ -2,7 +2,7 @@ const express = require('express');
 const exphbs = require('express-handlebars');
 const bodyParser = require('body-parser');
 const session = require('express-session');
-const validator = require('express-validator');
+const expressValidator = require('express-validator');
 const morgan = require('morgan');
 const parseurl = require('parseurl');
 const fs = require('fs');
@@ -18,6 +18,7 @@ app.set('view engine', 'handlebars');
 app.use(bodyParser.urlencoded({
   extended: false
 }));
+app.use(expressValidator());
 
 app.use(session({
   secret: 'letsgetwordy',
@@ -34,7 +35,7 @@ let guessedLetters = [];
 
 app.use((req, res, next) => {
   if (req.session.solve) { //if session has a random Word it will assign it to the session.
-    return next(); //if not it  will generate one
+    return next(); //if not it will generate one
   }
   let randomWord = wordList[Math.floor(Math.random() * wordList.length)]; //generates random word from list
   req.session.solve = randomWord;
@@ -48,24 +49,26 @@ app.use((req, res, next) => {
 
 
 app.get('/', (req, res) => {
-  let letterSpaces = Array(req.session.solve.length).fill(' _ ').join(''); //creates spaces for letters in random & joins them
 
-  console.log(letterSpaces);
   res.render('index', {
     letterSpaces: req.session.letterSpaces.join(''),
-    randomWord: req.session.solve,
+    // randomWord: req.session.solve,
     attempt: req.body.letter,
     guessedLetters: req.session.guessedLettersArray.join(' , '),
     guessesLeft: req.session.totalGuesses
-  }); //displays spaces/guesses for random word
+
+  });
+
 });
 
 app.post('/guessed', (req, res) => {
   let attempt = req.body.letter;
-  console.log(attempt);
-  if(req.session.splitRandomWord.includes(attempt)){            //if the split up random word includes the letter you guess
 
-    req.session.splitRandomWord.forEach(function(letter, index){    //then for each letter that matches split word letters display
+
+  console.log(attempt);
+  if(req.session.splitRandomWord.includes(attempt)){
+         //if the split up random word includes the letter you guess
+    req.session.splitRandomWord.forEach((letter, index) => {    //then for each letter that matches split word letters display
       if(attempt === letter){                                       //in place of blank space
         req.session.letterSpaces[index] = req.session.splitRandomWord[index];
       }
@@ -73,16 +76,30 @@ app.post('/guessed', (req, res) => {
   } else {                                                   //else if the letters you've already guessed doesn't contain the
     if (!req.session.guessedLettersArray.includes(attempt)) {       //guessed letter then push to guessed letters array and lose a turn
       req.session.guessedLettersArray.push(attempt);
-      req.session.totalGuesses --;
+      req.session.totalGuesses --;              //every new wrong letter deducts one turn
     }
 
   }
+
   res.redirect('/');
 });
 
 
 
+app.get('/newGame', (req, res)=>{           //destroys session
+  req.session.destroy(() => {
+    res.redirect('/');
+  });
+});
+
+
 app.listen(3000);
 
 
- // && !guessedLetters.includes(attempt)
+ // req.checkBody(req.body.letter, 'Must select a single letter.').isLength({min: 1, max: 1});
+ // let errors = req.validationErrors();
+ //   if (errors) {
+ //     res.render('index', {errors: errors});
+ //   } else {
+ //     res.redirect('/');
+ //   }
