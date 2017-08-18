@@ -26,8 +26,6 @@ app.use(session({
 }));
 
 
-
-
 //this is an array of strings
 const words = fs.readFileSync("/usr/share/dict/words", "utf-8").toLowerCase().split("\n");
 // console.log(words);
@@ -44,9 +42,9 @@ app.use((req, res, next) => {
   console.log(req.session.splitRandomWord);
   req.session.letterSpaces = Array(req.session.solve.length).fill(' _ ');
   req.session.totalGuesses = 8;
+  req.session.guessedLettersArray = guessedLetters;
   next();
 });
-
 
 
 app.get('/', (req, res) => {
@@ -57,7 +55,7 @@ app.get('/', (req, res) => {
     letterSpaces: req.session.letterSpaces.join(''),
     randomWord: req.session.solve,
     attempt: req.body.letter,
-    guessedLetters: guessedLetters,
+    guessedLetters: req.session.guessedLettersArray.join(' , '),
     guessesLeft: req.session.totalGuesses
   }); //displays spaces/guesses for random word
 });
@@ -65,15 +63,19 @@ app.get('/', (req, res) => {
 app.post('/guessed', (req, res) => {
   let attempt = req.body.letter;
   console.log(attempt);
-  if(req.session.splitRandomWord.includes(attempt)){
+  if(req.session.splitRandomWord.includes(attempt)){            //if the split up random word includes the letter you guess
 
-    req.session.splitRandomWord.forEach(function(letter, index){
-      if(attempt === letter){
+    req.session.splitRandomWord.forEach(function(letter, index){    //then for each letter that matches split word letters display
+      if(attempt === letter){                                       //in place of blank space
         req.session.letterSpaces[index] = req.session.splitRandomWord[index];
       }
     });
-  } else {
-    req.session.totalGuesses --;
+  } else {                                                   //else if the letters you've already guessed doesn't contain the
+    if (!req.session.guessedLettersArray.includes(attempt)) {       //guessed letter then push to guessed letters array and lose a turn
+      req.session.guessedLettersArray.push(attempt);
+      req.session.totalGuesses --;
+    }
+
   }
   res.redirect('/');
 });
@@ -81,3 +83,6 @@ app.post('/guessed', (req, res) => {
 
 
 app.listen(3000);
+
+
+ // && !guessedLetters.includes(attempt)
