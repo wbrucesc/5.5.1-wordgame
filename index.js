@@ -33,17 +33,20 @@ const words = fs.readFileSync("/usr/share/dict/words", "utf-8").toLowerCase().sp
 let wordList = words.filter(word => word.length > 4 && word.length <= 8);
 let guessedLetters = [];
 
+
+//if session has a random Word it will assign it to the session
+//if not it will generate one
 app.use((req, res, next) => {
-  if (req.session.solve) { //if session has a random Word it will assign it to the session.
-    return next(); //if not it will generate one
+  if (req.session.solve) {
+    return next();
   }
-  let randomWord = wordList[Math.floor(Math.random() * wordList.length)]; //generates random word from list
-  req.session.solve = randomWord;
-  req.session.splitRandomWord = randomWord.split('');
+  let randomWord = wordList[Math.floor(Math.random() * wordList.length)]; //generates random word
+  req.session.solve = randomWord;                           //random word
+  req.session.splitRandomWord = randomWord.split('');       //splits random word into own array
   console.log(req.session.splitRandomWord);
-  req.session.letterSpaces = Array(req.session.solve.length).fill(' _ ');
-  req.session.totalGuesses = 8;
-  req.session.guessedLettersArray = guessedLetters;
+  req.session.letterSpaces = Array(req.session.solve.length).fill(' _ '); //creates blanks for random word
+  req.session.totalGuesses = 8;                       //sets amount of guesses allowed
+  req.session.guessedLettersArray = guessedLetters;   //letters guessed pushed into this array
   next();
 });
 
@@ -58,48 +61,74 @@ app.get('/', (req, res) => {
     guessesLeft: req.session.totalGuesses
 
   });
+});
 
+//defeat page displays if game is lost
+app.get('/defeat', (req, res)=>{
+  res.render('defeat', {randomWord: req.session.solve});
+});
+
+//success page displays if game is won
+app.get('/success', (req, res)=>{
+  res.render('success');
 });
 
 app.post('/guessed', (req, res) => {
   let attempt = req.body.letter;
+  // console.log(attempt);
+  req.checkBody('letter', "Guess must be 1 letter only!").notEmpty().isAlpha().isLength({
+    min: 1,
+    max: 1
+  });
 
+  let errors = req.validationErrors();
 
-  console.log(attempt);
-  if(req.session.splitRandomWord.includes(attempt)){
-         //if the split up random word includes the letter you guess
-    req.session.splitRandomWord.forEach((letter, index) => {    //then for each letter that matches split word letters display
-      if(attempt === letter){                                       //in place of blank space
+  if (req.session.splitRandomWord.includes(attempt)) { //if the split up random word includes letter you guess
+
+    req.session.splitRandomWord.forEach((letter, index) => { //for each letter that matches split word letters display in place of blank space
+      if (attempt === letter) {
         req.session.letterSpaces[index] = req.session.splitRandomWord[index];
       }
     });
-  } else {                                                   //else if the letters you've already guessed doesn't contain the
-    if (!req.session.guessedLettersArray.includes(attempt)) {       //guessed letter then push to guessed letters array and lose a turn
-      req.session.guessedLettersArray.push(attempt);
-      req.session.totalGuesses --;              //every new wrong letter deducts one turn
-    }
 
+//else if the letters you've already guessed doesn't contain the
+//guessed letter then push to guessed letters array and lose a turn
+//every new wrong letter deducts one turn
+  } else {
+    if (!req.session.guessedLettersArray.includes(attempt) && !errors) {
+      req.session.guessedLettersArray.push(attempt);
+      req.session.totalGuesses--;
+    }
   }
 
-  res.redirect('/');
+  if (req.session.totalGuesses <= 0) {
+    res.redirect('defeat');
+  } else if (req.session.letterSpaces.join('') === req.session.solve && req.session.totalGuesses > 0){
+    res.redirect('success');
+  }
+
+  if (errors) {
+    res.render('index', {
+      // randomWord: req.session.solve,
+      letterSpaces: req.session.letterSpaces.join(''),
+      guessedLetters: req.session.guessedLettersArray.join(' , '),
+      guessesLeft: req.session.totalGuesses,
+      errors: errors
+    });
+
+
+  } else {
+    res.redirect('/');
+  }
 });
 
 
-
-app.get('/newGame', (req, res)=>{           //destroys session
+app.get('/newGame', (req, res) => {           //destroys session
   req.session.destroy(() => {
     res.redirect('/');
   });
 });
 
 
+
 app.listen(3000);
-
-
- // req.checkBody(req.body.letter, 'Must select a single letter.').isLength({min: 1, max: 1});
- // let errors = req.validationErrors();
- //   if (errors) {
- //     res.render('index', {errors: errors});
- //   } else {
- //     res.redirect('/');
- //   }
