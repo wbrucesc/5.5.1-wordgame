@@ -58,8 +58,8 @@ app.get('/', (req, res) => {
     // randomWord: req.session.solve,
     attempt: req.body.letter,
     guessedLetters: req.session.guessedLettersArray.join(' , '),
-    guessesLeft: req.session.totalGuesses
-
+    guessesLeft: req.session.totalGuesses,
+    userWarning: req.session.userWarning
   });
 });
 
@@ -75,6 +75,7 @@ app.get('/success', (req, res)=>{
 
 app.post('/guessed', (req, res) => {
   let attempt = req.body.letter;
+  req.session.userWarning = '';
   // console.log(attempt);
   req.checkBody('letter', "Guess must be 1 letter only!").notEmpty().isAlpha().isLength({
     min: 1,
@@ -90,10 +91,14 @@ app.post('/guessed', (req, res) => {
         req.session.letterSpaces[index] = req.session.splitRandomWord[index];
       }
     });
+  } else if(req.session.guessedLettersArray.includes(attempt)) {
 
-//else if the letters you've already guessed doesn't contain the
-//guessed letter then push to guessed letters array and lose a turn
-//every new wrong letter deducts one turn
+    req.session.userWarning = 'You already guessed that letter!';
+
+
+    //else if the letters you've already guessed doesn't contain the
+    //guessed letter then push to guessed letters array and lose a turn
+    //every new wrong letter deducts one turn
   } else {
     if (!req.session.guessedLettersArray.includes(attempt) && !errors) {
       req.session.guessedLettersArray.push(attempt);
